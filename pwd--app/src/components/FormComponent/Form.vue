@@ -15,28 +15,28 @@
         <form @submit.prevent="submitForm" class="formulario">
             <div v-show="contadorPasos === 0" class="campo">
                 <label for="name">Nombre</label>
-                <input type="text" id="name" v-model="formData.name" placeholder="Ingresa tu nombre"
+                <input type="text" id="name" v-model="Usuario.name" placeholder="Ingresa tu nombre"
                     @keyup.enter="nextPaso" />
                 <p v-if="errors.name" class="error">{{ errors.name }}</p>
             </div>
 
             <div v-show="contadorPasos === 1" class="campo">
                 <label for="email">Email</label>
-                <input type="email" id="email" v-model="formData.email" placeholder="Ingresa tu email"
+                <input type="email" id="email" v-model="Usuario.email" placeholder="Ingresa tu email"
                     @keyup.enter="nextPaso" />
                 <p v-if="errors.email" class="error">{{ errors.email }}</p>
             </div>
 
             <div v-show="contadorPasos === 2" class="campo">
                 <label for="date">Fecha</label>
-                <input type="date" id="date" v-model="formData.date" @keyup.enter="nextPaso" />
+                <input type="date" id="date" v-model="Usuario.date" @keyup.enter="nextPaso" />
                 <p v-if="errors.date" class="error">{{ errors.date }}</p>
             </div>
 
             <div v-show="contadorPasos === 3" class="campo">
                 <label for="password">Contraseña</label>
                 <div class="password-container">
-                    <input :type="mostrarPassword ? 'text' : 'password'" id="password" v-model="formData.password"
+                    <input :type="mostrarPassword ? 'text' : 'password'" id="password" v-model="Usuario.password"
                         placeholder="Ingresa tu contraseña" @keyup.enter="nextPaso" />
                     <button class="boton" type="button" @click="mostrarPassword = !mostrarPassword">
                         {{ mostrarPassword ? 'Ocultar' : 'Mostrar' }}
@@ -55,12 +55,11 @@
 
         <div v-if="enviado" class="resumen">
             <h3>¡Formulario enviado con éxito!</h3>
-            <p><strong>Nombre:</strong> {{ formData.name }}</p>
-            <p><strong>Email:</strong> {{ formData.email }}</p>
-            <p><strong>Fecha:</strong> {{ formData.date }}</p>
-            <!-- falta calcular años -->
-            <p><strong>Años:</strong> falta calcular</p>
-            <p><strong>Contraseña:</strong> ********</p>
+            <p><strong>Nombre: </strong> {{ Usuario.name }}</p>
+            <p><strong>Email: </strong> {{ Usuario.email }}</p>
+            <p><strong>Fecha: </strong> {{ Usuario.date }}</p>
+            <p><strong>Años: </strong>{{ calcularEdad() }}</p>
+            <p><strong>Contraseña: </strong>{{ Usuario.password }}</p>
         </div>
     </div>
 </template>
@@ -68,9 +67,11 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue';
 
+
+// Definición de interfaces para los pasos y los datos del formulario
 interface Paso {
     label: string;
-    campo: keyof FormData;
+    campo: keyof Errors;
 }
 
 interface FormData {
@@ -78,6 +79,7 @@ interface FormData {
     email: string;
     date: string;
     password: string;
+    edad: number;
 }
 
 interface Errors {
@@ -98,12 +100,28 @@ const contadorPasos = ref<number>(0);
 const mostrarPassword = ref<boolean>(false);
 const enviado = ref<boolean>(false);
 
-const formData = reactive<FormData>({
+const Usuario = reactive<FormData>({
     name: '',
     email: '',
     date: '',
-    password: ''
+    password: '',
+    edad: 0
 });
+
+//Calcular edad a partir de la fecha de nacimiento 
+function calcularEdad(): number {
+    const hoy = new Date();
+    const fechaNacimiento = new Date(Usuario.date);
+    let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+    const mes = hoy.getMonth() - fechaNacimiento.getMonth();
+
+    if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+        edad--;
+    }
+    
+    Usuario.edad = edad;
+    return edad;
+}
 
 const errors = reactive<Errors>({
     name: '',
@@ -112,38 +130,38 @@ const errors = reactive<Errors>({
     password: ''
 });
 
-const validarCampo = (campo: keyof FormData): boolean => {
+const validarCampo = (campo: keyof Errors): boolean => {
     errors[campo] = '';
     switch (campo) {
         case 'name':
-            if (!formData.name.trim()) {
+            if (!Usuario.name.trim()) {
                 errors.name = 'El nombre es obligatorio';
                 return false;
             }
             break;
         case 'email':
-            if (!formData.email.trim()) {
+            if (!Usuario.email.trim()) {
                 errors.email = 'El email es obligatorio';
                 return false;
             }
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(formData.email)) {
+            if (!emailRegex.test(Usuario.email)) {
                 errors.email = 'Ingresa un email válido';
                 return false;
             }
             break;
         case 'date':
-            if (!formData.date) {
+            if (!Usuario.date) {
                 errors.date = 'La fecha es obligatoria';
                 return false;
             }
             break;
         case 'password':
-            if (!formData.password) {
+            if (!Usuario.password) {
                 errors.password = 'La contraseña es obligatoria';
                 return false;
             }
-            if (formData.password.length < 6) {
+            if (Usuario.password.length < 6) {
                 errors.password = 'La contraseña debe tener al menos 6 caracteres';
                 return false;
             }
@@ -169,7 +187,7 @@ const submitForm = () => {
     const campo = pasos[contadorPasos.value].campo;
     if (validarCampo(campo)) {
         //falta crear usuario
-        console.log('Formulario enviado:', formData);
+        console.log('Formulario enviado:', Usuario);
         enviado.value = true;
     }
 };
@@ -194,8 +212,9 @@ const submitForm = () => {
     display: flex;
     justify-content: space-between;
     font-weight: bold;
-    
+
 }
+
 .colorPaso {
     color: #4CAF50;
     text-decoration: underline;
@@ -217,6 +236,7 @@ const submitForm = () => {
 .boton {
     margin: 10px;
 }
+
 .campo {
     display: flex;
     flex-direction: column;
@@ -240,6 +260,7 @@ const submitForm = () => {
     outline: none;
     box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
 }
+
 .botones {
     display: flex;
     justify-content: space-between;
